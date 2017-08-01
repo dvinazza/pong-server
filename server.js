@@ -11,6 +11,10 @@ var path = require('path');
 // Using the filesystem module
 var fs = require('fs');
 
+//
+var SimplexNoise = require('simplex-noise');
+var simplex = new SimplexNoise(Math.random);
+
 var server = http.createServer(handleRequest);
 server.listen(8080);
 
@@ -19,12 +23,12 @@ console.log('Server started on port 8080');
 function handleRequest(req, res) {
   // What did we request?
   var pathname = req.url;
-  
+
   // If blank let's ask for index.html
   if (pathname == '/') {
     pathname = '/index.html';
   }
-  
+
   // Ok what's our file extension
   var ext = path.extname(pathname);
 
@@ -64,26 +68,52 @@ var io = require('socket.io').listen(server);
 io.sockets.on('connection',
   // We are given a websocket object in our function
   function (socket) {
-  
-    console.log("We have a new client: " + socket.id);
-  
-    // When this user emits, client side: socket.emit('otherevent',some data);
-    socket.on('mouse',
-      function(data) {
-        // Data comes in as whatever was sent, including objects
-        console.log("Received: 'mouse' " + data.x + " " + data.y);
-      
-        // Send it to all other clients
-        socket.broadcast.emit('mouse', data);
-        
-        // This is a way to send to everyone including sender
-        // io.sockets.emit('message', "this goes to everyone");
 
-      }
-    );
-    
-    socket.on('disconnect', function() {
-      console.log("Client has disconnected");
+    console.log("We have a new client: " + socket.id);
+    socket.emit('hello', 'Greetings profesor Falken!');
+
+    socket.on('broadcast',
+      function(data) {
+          console.log(socket.id + ": " + data);
+    })
+
+    // ball
+    var b = setInterval(function() {
+      socket.emit('ball',
+      {
+         x: noise(3),
+         y: noise(4),
+       });
+    }, 1000/30);
+
+    var b = setInterval(function() {
+      socket.emit('bats',
+      {
+        bat: 0,
+        y: noise(0),
+      });
+    }, 1000/30);
+
+    var b = setInterval(function() {
+      socket.emit('bats',
+      {
+        bat: 1,
+        y: noise(1),
+      });
+    }, 1000/30);
+
+    socket.on('disconnect',
+      function() {
+      console.log("Client has disconnected: " + socket.id);
     });
   }
 );
+
+function random(low, high) {
+    return Math.random() * (high - low) + low;
+}
+
+function noise(x) {
+  var now = process.hrtime();
+  return Math.abs(simplex.noise3D(now[0]/10, now[1]/500000000, x));
+}
